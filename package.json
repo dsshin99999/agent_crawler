@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "npx playwright install --with-deps"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.2",
