@@ -930,7 +930,11 @@ export async function POST(request: Request) {
         isPriceAnomalous(candidate.listPrice, candidate.salePrice) ||
         (!candidate.listPrice && candidate.salePrice)
       ) {
-        const corrected = await parseProductInfoWithGemini(keyword, [candidate]);
+        const corrected = await parseProductInfoWithGemini(
+          keyword,
+          [candidate],
+          "fill",
+        );
         if (corrected.productName || corrected.listPrice || corrected.salePrice) {
           finalCandidate = {
             url: corrected.detailUrl || candidate.url,
