@@ -11,8 +11,20 @@ type ParsedCandidate = {
   reason?: string;
 };
 
+type SearchFormProductItem = {
+  url?: string;
+  productName?: string;
+  listPrice?: string;
+  salePrice?: string;
+  imageSrc?: string;
+  score?: number;
+  reason?: string;
+  keywordUsed?: string;
+};
+
 export default function Home() {
-  const [keyword, setKeyword] = useState("");
+  const [brand, setBrand] = useState("");
+  const [productName, setProductName] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">(
     "idle",
   );
@@ -28,7 +40,7 @@ export default function Home() {
       const res = await fetch("/api/collect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword }),
+        body: JSON.stringify({ brand, product_name: productName }),
       });
 
       const data = await res.json();
@@ -55,6 +67,9 @@ export default function Home() {
 
   const parsedCandidates: ParsedCandidate[] =
     result?.raw_data_parse?.parsed_candidates ?? [];
+  const searchFormProducts: SearchFormProductItem[] = (
+    result?.search_form_product_list ?? []
+  ).slice(0, 5);
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
@@ -64,23 +79,32 @@ export default function Home() {
             상품 정보 수집 에이전트
           </p>
           <h1 className="text-3xl font-semibold leading-tight">
-            키워드를 입력하면 키워드와 가까운 제품결과를 확인하실수 있습니다.
+            브랜드와 제품명을 입력하면 공식몰과 제품 정보를 확인할 수 있습니다.
           </h1>
         </header>
 
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <label className="flex flex-col gap-2 text-sm font-medium">
-            키워드 입력창
+            브랜드
             <input
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              placeholder="예: 비에날"
+              className="h-12 rounded-lg border border-zinc-200 bg-white px-4 text-base shadow-sm focus:border-zinc-400 focus:outline-none"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-sm font-medium">
+            제품명
+            <input
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
               placeholder="예: 비에날씬"
               className="h-12 rounded-lg border border-zinc-200 bg-white px-4 text-base shadow-sm focus:border-zinc-400 focus:outline-none"
             />
           </label>
           <button
             type="submit"
-            disabled={!keyword || status === "loading"}
+            disabled={!brand || !productName || status === "loading"}
             className="h-12 rounded-lg bg-black text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
           >
             {status === "loading" ? "요청 중..." : "수집 시작"}
@@ -115,10 +139,10 @@ export default function Home() {
                   <h3 className="text-sm font-semibold text-zinc-900">
                     검색 결과 상위 3개
                   </h3>
-                  {result.source_url ? (
+                  {result.official_homepage ? (
                     <a
                       className="inline-flex items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-800 transition hover:bg-zinc-100"
-                      href={result.source_url}
+                      href={result.official_homepage}
                       target="_blank"
                       rel="noreferrer"
                     >
@@ -176,7 +200,7 @@ export default function Home() {
               <div className="mt-4 grid gap-2 text-sm text-zinc-700">
                 <div>
                   <span className="font-medium text-zinc-900">제품명:</span>{" "}
-                  {result.product_name || "-"}
+                  {result.product_name || result.product_name_input || "-"}
                 </div>
                 <div>
                   <span className="font-medium text-zinc-900">정가:</span>{" "}
@@ -190,10 +214,10 @@ export default function Home() {
                 ) : null}
                 <div>
                   <span className="font-medium text-zinc-900">공식몰:</span>{" "}
-                  {result.source_url ? (
+                  {result.official_homepage ? (
                     <a
                       className="inline-flex items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-800 transition hover:bg-zinc-100"
-                      href={result.source_url}
+                      href={result.official_homepage}
                       target="_blank"
                       rel="noreferrer"
                     >
@@ -222,8 +246,99 @@ export default function Home() {
                   <span className="font-medium text-zinc-900">수집 시각:</span>{" "}
                   {result.created_at || "-"}
                 </div>
+                <div>
+                  <span className="font-medium text-zinc-900">
+                    검색폼 사용 가능:
+                  </span>{" "}
+                  {result.search_form_available === true
+                    ? "가능"
+                    : result.search_form_available === false
+                      ? "불가"
+                      : "-"}
+                </div>
               </div>
             )}
+
+            {searchFormProducts.length > 0 ? (
+              <div className="mt-4 rounded-xl border border-zinc-200 bg-white p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-zinc-900">
+                    검색폼 기준 제품 목록 (최대 5개)
+                  </h3>
+                  {result.search_form_confirmed_url ? (
+                    <a
+                      className="inline-flex items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-800 transition hover:bg-zinc-100"
+                      href={result.search_form_confirmed_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      검색 결과 페이지 열기
+                    </a>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 grid gap-4">
+                  {searchFormProducts.map((item, index) => (
+                    <div
+                      key={`${item.url ?? item.productName ?? index}`}
+                      className="rounded-lg border border-zinc-200 bg-zinc-50 p-4"
+                    >
+                      <div className="text-sm text-zinc-500">#{index + 1}</div>
+                      {item.imageSrc ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.imageSrc}
+                          alt={item.productName || `product-${index + 1}`}
+                          className="mt-2 h-24 w-24 rounded-md border border-zinc-200 object-cover bg-white"
+                        />
+                      ) : null}
+                      <div className="mt-2 text-sm text-zinc-700">
+                        <div>
+                          <span className="font-medium text-zinc-900">
+                            제품명:
+                          </span>{" "}
+                          {item.productName || "-"}
+                        </div>
+                        <div>
+                          <span className="font-medium text-zinc-900">정가:</span>{" "}
+                          {item.listPrice || "-"}
+                        </div>
+                        {item.salePrice && item.salePrice !== item.listPrice ? (
+                          <div>
+                            <span className="font-medium text-zinc-900">
+                              할인가:
+                            </span>{" "}
+                            {item.salePrice}
+                          </div>
+                        ) : null}
+                        {item.keywordUsed ? (
+                          <div>
+                            <span className="font-medium text-zinc-900">
+                              검색어:
+                            </span>{" "}
+                            {item.keywordUsed}
+                          </div>
+                        ) : null}
+                        <div className="mt-2">
+                          {item.url ? (
+                            <a
+                              className="inline-flex items-center justify-center rounded-md border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-800 transition hover:bg-zinc-100"
+                              href={item.url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              상세페이지 열기
+                            </a>
+                          ) : (
+                            "-"
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <details className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-700">
               <summary className="cursor-pointer text-sm font-medium text-zinc-800">
@@ -243,15 +358,10 @@ export default function Home() {
                   result.raw_data_parse
                     ? {
                         ...result.raw_data_parse,
-                        crawl: result.raw_data_parse?.crawl
-                          ? {
-                              ...result.raw_data_parse.crawl,
-                              productCandidates:
-                                result.raw_data_parse.crawl.productCandidates?.filter(
-                                  (item: any) => item?.score >= 3,
-                                ) ?? [],
-                            }
-                          : result.raw_data_parse?.crawl,
+                        parsed_candidates:
+                          result.raw_data_parse?.parsed_candidates?.filter(
+                            (item: any) => item?.score >= 3,
+                          ) ?? [],
                       }
                     : result.raw_data_parse,
                   null,

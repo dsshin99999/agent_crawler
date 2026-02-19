@@ -8,8 +8,10 @@ export async function GET(request: Request) {
     return Response.json({ error: "id is required" }, { status: 400 });
   }
 
+  const targetTable =
+    process.env.DISCOVERY_TABLE || "site_metadata_discovery";
   const { data, error } = await supabaseAdmin
-    .from("products")
+    .from(targetTable)
     .select("*")
     .eq("id", id)
     .single();
@@ -18,5 +20,5 @@ export async function GET(request: Request) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 
-  return Response.json({ data });
+  return Response.json({ data, product: data });
 }
